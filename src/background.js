@@ -60,9 +60,9 @@ async function deleteRepo(tabId, account, repo) {
       });
 
       // Once the delete is done, the github automatically redirect to
-      // repository page. 
+      // repository page.
       // If we return directly to trigger next repo delete,
-      // the tab will update to new repo settings page, but the github 
+      // the tab will update to new repo settings page, but the github
       // repository redirection will override it immediately, so the final tab
       // url is always repository and we don't have chance to delete the next
       // repo.
