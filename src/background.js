@@ -5,33 +5,7 @@
 // For more information on background script,
 // See https://developer.chrome.com/extensions/background_pages
 
-function getRepoId(account, repo) {
-  return `${account}/${repo}`;
-}
-
-function getRepoUrl(account, repo) {
-  return `https://github.com/${getRepoId(account, repo)}/settings`;
-}
-
-function getRepoSettingsUrl(repoId) {
-  return `https://github.com/${repoId}/settings`;
-}
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  // TODO: delete this code later.
-  if (request.type === 'GREETINGS') {
-    const message = `Hi ${
-      sender.tab ? 'Con' : 'Pop'
-    }, my name is Bac. I am from Background. It's great to hear from you.`;
-
-    // Log message coming from the `request` parameter
-    console.log(request.payload.message);
-    // Send a response message
-    sendResponse({
-      message,
-    });
-  }
-
   if (request.type === 'delete' && sender.tab) {
     deleteRepos(request, sender, sendResponse);
     // Return true to tell the sendMessage this is an async processing.
@@ -41,12 +15,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function deleteRepos(request, sender, sendResponse) {
   const { account, repos } = request.payload;
-  console.debug(`Try to delete repos ${repos}`);
-
   for (const repo of repos) {
-    console.debug(`Try to delete ${account}/${repo}`);
     await deleteRepo(sender.tab.id, account, repo);
-    console.debug(`Finish deleting ${account}/${repo}`);
   }
 
   sendResponse({
@@ -56,8 +26,8 @@ async function deleteRepos(request, sender, sendResponse) {
 }
 
 async function deleteRepo(tabId, account, repo) {
-  const repoId = getRepoId(account, repo);
-  const url = getRepoUrl(account, repo);
+  const repoId = `${account}/${repo}`;
+  const url = `https://github.com/${repoId}/settings`;
   // Request to update tab to target repo settings page, but the tab may not
   // finish the updating after the await, which means the tab.url is still the
   // previous url. So don't trust the await return result Tab.
@@ -73,7 +43,7 @@ async function deleteRepo(tabId, account, repo) {
         return console.debug(`The tab onUpdated is not completed`);
       }
 
-      if (tab.url !== getRepoSettingsUrl(repoId)) {
+      if (tab.url !== url) {
         return console.debug(
           `The tab url is ${tab.url}, which is not the settings page, so could not run the script to delete repo for [${repoId}]`
         );
@@ -104,12 +74,10 @@ async function deleteRepo(tabId, account, repo) {
 }
 
 function deleteRepoById(repoId) {
-  console.debug('xxxx===>before simulate the DOM actions  ' + repoId);
   document.querySelector('#dialog-show-repo-delete-menu-dialog').click();
   document.querySelector('#repo-delete-proceed-button').click();
   document.querySelector('#repo-delete-proceed-button').click();
   document.querySelector('#verification_field').value = repoId;
   document.querySelector('#repo-delete-proceed-button').disabled = false;
   document.querySelector('#repo-delete-proceed-button').click();
-  console.debug('xxxx===>after simulate the DOM actions  ' + repoId);
 }

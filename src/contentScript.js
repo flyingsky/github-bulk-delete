@@ -10,15 +10,7 @@
 
 // For more information on Content Scripts,
 // See https://developer.chrome.com/extensions/content_scripts
-
-// Log `title` of current active web page
-const pageTitle = document.head.getElementsByTagName('title')[0].innerHTML;
-console.log(
-  `Page title is: '${pageTitle}' - evaluated by Chrome extension's 'contentScript.js' file`
-);
-
 const checkboxName = 'target-repo';
-
 const $ = document.querySelector.bind(document);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
@@ -47,7 +39,6 @@ function confirmDelete() {
     'Are you sure to delete the selected repos: ' + repos.join(', ')
   );
   if (confirmed) {
-    console.log('delete ' + repos.join(', '));
     chrome.runtime.sendMessage(
       {
         type: 'delete',
@@ -98,10 +89,6 @@ function getSelectedRepoNames() {
 
 // Listen for message
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'COUNT') {
-    console.log(`Current count is ${request.payload.count}`);
-  }
-
   if (request.type === 'delete') {
     console.log(`Delete all repos:\n ${request.payload.repos.join('\n')}`);
   }
