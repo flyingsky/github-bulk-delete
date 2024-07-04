@@ -17,23 +17,93 @@ console.log(
   `Page title is: '${pageTitle}' - evaluated by Chrome extension's 'contentScript.js' file`
 );
 
-// Communicate with background file by sending a message
-chrome.runtime.sendMessage(
-  {
-    type: 'GREETINGS',
-    payload: {
-      message: 'Hello, my name is Con. I am from ContentScript.',
-    },
-  },
-  (response) => {
-    console.log(response.message);
+const checkboxName = 'target-repo';
+
+const $ = document.querySelector.bind(document);
+const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+// location like `https://github.com/flyingsky?tab=repositories`
+function getGithubAcountId() {
+  return location.pathname.split('/').find(Boolean);
+}
+
+function insertCheckBeforeRepoNames() {
+  $$('a[itemprop="name codeRepository"]').forEach((repoLink) => {
+    const repoName = repoLink.innerText.trim();
+    repoLink.parentNode.insertAdjacentHTML(
+      'afterbegin',
+      `<input type="checkbox" name="${checkboxName}" value="${repoName}">`
+    );
+  });
+}
+
+function confirmDelete() {
+  const repos = getSelectedRepoNames();
+  if (repos.length === 0) {
+    return alert('Please select repo first');
   }
-);
+
+  const confirmed = confirm(
+    'Are you sure to delete the selected repos: ' + repos.join(', ')
+  );
+  if (confirmed) {
+    console.log('delete ' + repos.join(', '));
+    chrome.runtime.sendMessage(
+      {
+        type: 'delete',
+        payload: {
+          repos,
+          account: getGithubAcountId(),
+        },
+      },
+      (response) => {
+        console.log(
+          `Finish send delete message from tab to background: ${response}`
+        );
+      }
+    );
+  }
+}
+
+// TODO: the delete button could be replaced by the action button.
+function insertDeleteButton() {
+  const deleteButton = document.createElement('button');
+  deleteButton.innerText = 'Delete';
+  deleteButton.style.position = 'sticky';
+  deleteButton.style.left = '60%';
+  deleteButton.style.bottom = '0px';
+  deleteButton.style.width = '60px';
+  deleteButton.style.height = '60px';
+  deleteButton.style.borderRadius = '30px';
+  deleteButton.style.background = 'red';
+  deleteButton.style.border = '1px solid white';
+  deleteButton.addEventListener('click', confirmDelete);
+  $('main').insertAdjacentElement('beforeend', deleteButton);
+}
+
+function getSelectedRepoNames() {
+  return $$(`input[name="${checkboxName}"]`)
+    .filter((check) => check.checked)
+    .map((check) => check.value);
+}
+
+(function init() {
+  // Only insert the checkboxes and delete button into repository page.
+  const isRepositoryListPage = location.href.includes('tab=repositories');
+  if (isRepositoryListPage) {
+    insertCheckBeforeRepoNames();
+    insertDeleteButton();
+  }
+})();
 
 // Listen for message
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'COUNT') {
     console.log(`Current count is ${request.payload.count}`);
+  }
+
+  if (request.type === 'delete') {
+    console.log(`Delete all repos:\n ${request.payload.repos.join('\n')}`);
   }
 
   // Send an empty response

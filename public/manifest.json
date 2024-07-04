@@ -12,17 +12,19 @@
   "background": {
     "service_worker": "background.js"
   },
-  "action": {
-    "default_title": "Github Bulk Delete",
-    "default_popup": "popup.html"
-  },
   "permissions": [
-    "storage"
+    "storage",
+    "scripting",
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://github.com/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "<all_urls>"
+        "https://github.com/*"
       ],
       "run_at": "document_idle",
       "js": [
