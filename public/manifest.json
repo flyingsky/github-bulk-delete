@@ -14,14 +14,12 @@
   },
   "permissions": ["scripting", "activeTab", "tabs"],
   "host_permissions": [
-    "https://github.com/*?tab=repositories",
     "https://github.com/*/settings"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://github.com/*?tab=repositories",
-        "https://github.com/*/settings"
+        "https://github.com/*?tab=repositories"
       ],
       "run_at": "document_idle",
       "js": ["contentScript.js"]
