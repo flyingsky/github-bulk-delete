@@ -1,9 +1,29 @@
 'use strict';
 
+import {isGithubRepository} from './common';
+
 // With background scripts you can communicate with popup
 // and contentScript files.
 // For more information on background script,
 // See https://developer.chrome.com/extensions/background_pages
+
+// Listen to the tab change, for example the github repository next page, or
+// switch to other page then switch back to the repository page, so we could
+// notify the contentScript to update the dom to show delete button.
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if ( changeInfo.status === 'complete' && isGithubRepository(tab.url)) {
+    console.log(`Tab ${tabId} complete ${tab.url}`);
+    chrome.tabs.sendMessage(tabId, {type: 'init'}, (response) => {
+      if (chrome.runtime.lastError) {
+          // This error often means the content script isn't injected
+          // on the page, which is fine for pages you don't match.
+          console.warn("Error sending message: ", chrome.runtime.lastError.message);
+        } else {
+          console.log("Content script responded:", response);
+        }
+    });
+  }
+});
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'delete' && sender.tab) {

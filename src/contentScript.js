@@ -58,6 +58,11 @@ function confirmDelete() {
 
 // TODO: the delete button could be replaced by the action button.
 function insertDeleteButton() {
+  if ($('#gbd_delete')) {
+    console.log('The delete button exists, exit');
+    return;
+  }
+  
   const deleteButton = document.createElement('button');
   deleteButton.innerText = 'Delete';
   deleteButton.style.position = 'sticky';
@@ -69,6 +74,7 @@ function insertDeleteButton() {
   deleteButton.style.background = 'red';
   deleteButton.style.border = '1px solid white';
   deleteButton.addEventListener('click', confirmDelete);
+  deleteButton.id = 'gbd_delete';
   $('main').insertAdjacentElement('beforeend', deleteButton);
 }
 
@@ -78,18 +84,21 @@ function getSelectedRepoNames() {
     .map((check) => check.value);
 }
 
-(function init() {
+function init() {
   // Only insert the checkboxes and delete button into repository page.
   const isRepositoryListPage = location.href.includes('tab=repositories');
   if (isRepositoryListPage) {
     insertCheckBeforeRepoNames();
     insertDeleteButton();
   }
-})();
+};
 
 // Listen for message
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'delete') {
+  if (request.type === 'init') {
+    console.log('init the delete button');
+    init();
+  } else if (request.type === 'delete') {
     console.log(`Delete all repos:\n ${request.payload.repos.join('\n')}`);
   }
 
