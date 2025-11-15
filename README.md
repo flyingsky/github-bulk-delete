@@ -23,4 +23,4 @@ Suggestions and pull requests are welcomed! To start the dev follow below steps:
   - Check the Developer mode checkbox
   - Click on the Load unpacked extension button
   - Select the folder auto generated folder `build`
-  - Bundle the app into static files for Chrome store by `npm run build`.
+- Bundle the app into static files for Chrome store by `npm run repack` and you can find the out put in the release folder.
