@@ -93,11 +93,20 @@ function init() {
   }
 };
 
+function deInit() {
+  if ($('#gbd_delete')) {
+    $('#gbd_delete').remove();
+  }
+}
+
 // Listen for message
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'init') {
-    console.log('init the delete button');
+    // console.log('init the delete button');
     init();
+  } else if (request.type === 'deInit') {
+    // console.log('hide the delete button');
+    deInit();
   } else if (request.type === 'delete') {
     console.log(`Delete all repos:\n ${request.payload.repos.join('\n')}`);
   }
