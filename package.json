@@ -1,7 +1,7 @@
 {
   "name": "github-bulk-delete",
   "version": "0.1.0",
-  "description": "My Chrome Extension",
+  "description": "Chrome Extension to bulk delete github repositories",
   "private": true,
   "scripts": {
     "watch": "webpack --mode=development --watch --config config/webpack.config.js",

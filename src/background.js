@@ -1,6 +1,6 @@
 'use strict';
 
-import {isGithubRepository} from './common';
+import { isGithubRepository } from './common';
 
 // All the tabs that are currently in the repository page.
 const repositoryTabIds = new Set();
@@ -14,7 +14,7 @@ const repositoryTabIds = new Set();
 // switch to other page then switch back to the repository page, so we could
 // notify the contentScript to update the dom to show delete button.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if ( changeInfo.status !== 'complete') {
+  if (changeInfo.status !== 'complete') {
     return;
   }
 
@@ -24,11 +24,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (isGithubRepository(tab.url)) {
     // A repository tab, init the delete button.
     repositoryTabIds.add(tabId);
-    message = {type: 'init'};
+    message = { type: 'init' };
   } else if (repositoryTabIds.has(tabId)) {
     // It was repository tab before, but now it's changed to other page, so hide the delete button.
     repositoryTabIds.delete(tabId);
-    message = {type: 'deInit'};
+    message = { type: 'deInit' };
   } else {
     // Not a repository tab, and not in the repositoryTabIds, so do nothing.
     return;
@@ -36,12 +36,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
   chrome.tabs.sendMessage(tabId, message, (response) => {
     if (chrome.runtime.lastError) {
-        // This error often means the content script isn't injected
-        // on the page, which is fine for pages you don't match.
-        console.warn("Error sending message: ", chrome.runtime.lastError.message);
-      } else {
-        console.log("Content script responded:", response);
-      }
+      // This error often means the content script isn't injected
+      // on the page, which is fine for pages you don't match.
+      console.warn('Error sending message: ', chrome.runtime.lastError.message);
+    } else {
+      console.log('Content script responded:', response);
+    }
   });
 });
 

@@ -62,7 +62,7 @@ function insertDeleteButton() {
     console.log('The delete button exists, exit');
     return;
   }
-  
+
   const deleteButton = document.createElement('button');
   deleteButton.innerText = 'Delete';
   deleteButton.style.position = 'sticky';
@@ -91,7 +91,7 @@ function init() {
     insertCheckBeforeRepoNames();
     insertDeleteButton();
   }
-};
+}
 
 function deInit() {
   if ($('#gbd_delete')) {
