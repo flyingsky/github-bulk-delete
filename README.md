@@ -10,6 +10,11 @@ After install this extension, sign in your account, then go to your repository l
 
 This extension will add a checkbox to each repository and a "Delete" button on the repository page. Select multiple repos, then click the Delete button to start the deletion automatically.
 
+## Design
+
+- The `contentScript.js` builds the UI on the repository page, including the checkbox next to each repository name, select all checkbox and delete button.
+- The `background.js` manipulate the tab to simulate the human beings's actions to delete repository one by one.
+
 ## Contribution
 
 Suggestions and pull requests are welcomed! To start the dev follow below steps:
