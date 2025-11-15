@@ -15,7 +15,9 @@ This extension will add a checkbox to each repository and a "Delete" button on t
 Suggestions and pull requests are welcomed! To start the dev follow below steps:
 
 - `npm install -g chrome-extension-cli` if you don't install it before.
-- Watch your change: `cd github-bulk-delete && npm run watch`.
+- `cd github-bulk-delete`
+- `npm install` if it's your first time to initial this project
+- `npm run watch` watch your change in local
 - Load the extension into the Chrome.
   - Open chrome://extensions
   - Check the Developer mode checkbox
