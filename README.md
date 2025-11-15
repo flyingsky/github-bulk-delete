@@ -22,5 +22,5 @@ Suggestions and pull requests are welcomed! To start the dev follow below steps:
   - Open chrome://extensions
   - Check the Developer mode checkbox
   - Click on the Load unpacked extension button
-  - Select the folder evus-filler/build
+  - Select the folder auto generated folder `build`
   - Bundle the app into static files for Chrome store by `npm run build`.
