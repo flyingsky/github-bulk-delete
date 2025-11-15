@@ -45,6 +45,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   });
 });
 
+// Listen for message from contentScript.js. This triggers the deletion of the selected repos.
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'delete' && sender.tab) {
     deleteRepos(request, sender, sendResponse);
@@ -53,18 +54,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// Delete the selected repos.
+/**
+ *
+ * @param {type: 'delete', payload: { account: string, repos: string[] }} request The request message from contentScript.js.
+ * @param {sender: { tab: { id: number } }} sender The sender of the message.
+ * @param {sendResponse: (response: { type: 'delete', payload: { repos: string[] } }) => void} sendResponse The response to send back to the contentScript.js.
+ */
 async function deleteRepos(request, sender, sendResponse) {
   const { account, repos } = request.payload;
   for (const repo of repos) {
     await deleteRepo(sender.tab.id, account, repo);
   }
 
+  // Send the response back to the contentScript.js.
   sendResponse({
     type: 'delete',
     payload: { repos },
   });
 }
 
+// Delete a single repo.
+/**
+ *
+ * @param {tabId: number} tabId The id of the tab to delete the repo.
+ * @param {account: string} account The account of the repo.
+ * @param {repo: string} repo The name of the repo.
+ */
 async function deleteRepo(tabId, account, repo) {
   const repoId = `${account}/${repo}`;
   const url = `https://github.com/${repoId}/settings`;
@@ -113,6 +129,11 @@ async function deleteRepo(tabId, account, repo) {
   });
 }
 
+// Simulate the user action to delete a repo.
+/**
+ *
+ * @param {repoId: string} repoId The id of the repo to delete.
+ */
 function deleteRepoById(repoId) {
   document.querySelector('#dialog-show-repo-delete-menu-dialog').click();
   document.querySelector('#repo-delete-proceed-button').click();
