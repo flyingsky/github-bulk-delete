@@ -12,7 +12,12 @@ import { isGithubRepository } from './common';
 
 const PREFIX = 'gbd';
 const CHECKBOX_NAME = `${PREFIX}_target_repo`;
+const SELECT_ALL_CHECKBOX_ID = `${PREFIX}_select_all_repos`;
 const DELETE_BUTTON_ID = `${PREFIX}_delete`;
+const ACTIONS_CONTAINER_ID = `${PREFIX}_actions_container`;
+
+const GITHUB_REPOSITORY_LIST_SELECTOR = '.Layout-main';
+const GITHUB_REPOSITORY_LINK_SELECTOR = 'a[itemprop="name codeRepository"]';
 
 const $ = document.querySelector.bind(document);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -20,12 +25,33 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 // location like `https://github.com/flyingsky?tab=repositories`
 const getGithubAcountId = () => location.pathname.split('/').find(Boolean);
 
-const getDeleteButton = () => $(`#${DELETE_BUTTON_ID}`);
+const getSelectAllCheckbox = () => $(`#${SELECT_ALL_CHECKBOX_ID}`);
+
+const getActionsContainer = () => $(`#${ACTIONS_CONTAINER_ID}`);
 
 const getSelectedRepoNames = () =>
   $$(`input[name="${CHECKBOX_NAME}"]`)
     .filter((check) => check.checked)
     .map((check) => check.value);
+
+// Detect if GitHub is in dark mode or light mode by checking the actual background color.
+const isDarkModeTheme = () => {
+  const element = document.body || document.documentElement;
+  const bgColor = window.getComputedStyle(element).backgroundColor;
+
+  // Extract RGB values from the background color
+  const rgb = bgColor.match(/\d+/g);
+  if (!rgb || rgb.length < 3) {
+    return false; // Default to light mode if we can't detect
+  }
+
+  // Calculate relative luminance using the formula
+  const [r, g, b] = rgb.map(Number);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  // If luminance is less than 0.5, it's a dark background
+  return luminance < 0.5;
+};
 
 function confirmDelete() {
   const repos = getSelectedRepoNames();
@@ -59,9 +85,7 @@ function confirmDelete() {
 
 // Insert a checkbox before each repository link.
 function insertCheckBeforeRepoNames() {
-  const REPOSITORY_LINK_SELECTOR = 'a[itemprop="name codeRepository"]';
-
-  $$(REPOSITORY_LINK_SELECTOR).forEach((repoLink) => {
+  $$(GITHUB_REPOSITORY_LINK_SELECTOR).forEach((repoLink) => {
     // Check if checkbox already exists for this repo
     const existingCheckbox = repoLink.parentNode.querySelector(
       `input[name="${CHECKBOX_NAME}"]`
@@ -79,27 +103,136 @@ function insertCheckBeforeRepoNames() {
   });
 }
 
+// Inject CSS styles for the batch delete UI.
+const injectStyles = () => {
+  if ($(`#${PREFIX}_styles`)) {
+    return; // Styles already injected
+  }
+
+  const isDarkMode = isDarkModeTheme();
+  const style = document.createElement('style');
+  style.id = `${PREFIX}_styles`;
+  style.textContent = `
+    #${ACTIONS_CONTAINER_ID} {
+      position: sticky;
+      bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      margin: 0 20%;
+      z-index: 1000;
+      background-color: ${
+        isDarkMode ? 'rgba(27, 31, 36, 0.6)' : 'rgba(255, 255, 255, 0.6)'
+      };
+      border: 1px solid ${
+        isDarkMode ? 'rgba(240, 246, 252, 0.1)' : 'rgba(27, 31, 36, 0.15)'
+      };
+    }
+
+    .${PREFIX}_select_all_wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #${SELECT_ALL_CHECKBOX_ID} {
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+    }
+
+    label[for="${SELECT_ALL_CHECKBOX_ID}"] {
+      color: ${isDarkMode ? '#c9d1d9' : '#24292f'};
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #${DELETE_BUTTON_ID} {
+      padding: 8px 16px;
+      background-color: #da3633;
+      color: #ffffff;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    #${DELETE_BUTTON_ID}:hover {
+      background-color: #b62324;
+    }
+  `;
+  document.head.appendChild(style);
+};
+
+// Build the select all checkbox with its wrapper and label.
+const buildSelectAllCheckbox = () => {
+  // Create a wrapper for the select all checkbox and label.
+  const selectAllWrapper = document.createElement('div');
+  selectAllWrapper.className = `${PREFIX}_select_all_wrapper`;
+
+  // Add a checkbox to select all repos checkboxes.
+  const selectAllCheckbox = document.createElement('input');
+  selectAllCheckbox.type = 'checkbox';
+  selectAllCheckbox.id = SELECT_ALL_CHECKBOX_ID;
+  // TODO: If any repo checkbox is unchecked, the select all checkbox should be unchecked.
+  selectAllCheckbox.addEventListener('click', selectAllRepos);
+  selectAllWrapper.appendChild(selectAllCheckbox);
+
+  // Add label for the select all checkbox.
+  const selectAllLabel = document.createElement('label');
+  selectAllLabel.htmlFor = SELECT_ALL_CHECKBOX_ID;
+  selectAllLabel.innerText = 'Select all';
+  selectAllWrapper.appendChild(selectAllLabel);
+
+  return selectAllWrapper;
+};
+
+// Build the delete button.
+const buildDeleteButton = () => {
+  const deleteButton = document.createElement('button');
+  deleteButton.id = DELETE_BUTTON_ID;
+  deleteButton.innerText = 'Delete Repositories';
+  deleteButton.addEventListener('click', confirmDelete);
+  return deleteButton;
+};
+
 // TODO: the delete button could be replaced by the action button.
-function insertDeleteButton() {
-  if (getDeleteButton()) {
-    console.log('The delete button exists, exit');
+function insertActionsContainer() {
+  if (getActionsContainer()) {
+    console.log('The batch delete UI container already exists, exit');
     return;
   }
 
-  // Add the delete button to the repository page.
-  const deleteButton = document.createElement('button');
-  deleteButton.id = DELETE_BUTTON_ID;
-  deleteButton.innerText = 'Delete';
-  deleteButton.style.position = 'sticky';
-  deleteButton.style.left = '60%';
-  deleteButton.style.bottom = '0px';
-  deleteButton.style.width = '60px';
-  deleteButton.style.height = '60px';
-  deleteButton.style.borderRadius = '30px';
-  deleteButton.style.background = 'red';
-  deleteButton.style.border = '1px solid white';
-  deleteButton.addEventListener('click', confirmDelete);
-  $('main').insertAdjacentElement('beforeend', deleteButton);
+  // Inject CSS styles
+  injectStyles();
+
+  // Create a container for all batch delete UI elements.
+  const container = document.createElement('div');
+  container.id = ACTIONS_CONTAINER_ID;
+  container.appendChild(buildSelectAllCheckbox());
+  container.appendChild(buildDeleteButton());
+  // Append the container to the page.
+  $(GITHUB_REPOSITORY_LIST_SELECTOR).insertAdjacentElement(
+    'beforeend',
+    container
+  );
+}
+
+// Select/deselect all repos checkboxes when select/deselect the SELECT_ALL_CHECKBOX_ID checkbox.
+function selectAllRepos() {
+  const selectAllCheckbox = getSelectAllCheckbox();
+  const repoCheckboxes = $$(`input[name="${CHECKBOX_NAME}"]`);
+  repoCheckboxes.forEach((checkbox) => {
+    checkbox.checked = selectAllCheckbox.checked;
+  });
 }
 
 // Initialize the repository page DOM updates to show batch delete UI.
@@ -107,20 +240,22 @@ function insertDeleteButton() {
 function init() {
   if (isGithubRepository(location.href)) {
     insertCheckBeforeRepoNames();
-    insertDeleteButton();
+    insertActionsContainer();
   }
 }
 
 // Deinitialize to remove the batch delete UI.
 // This function should be called when leaving the repository page.
 function deInit() {
-  // Remove the delete button.
-  const deleteButton = getDeleteButton();
-  if (deleteButton) {
-    deleteButton.remove();
+  // Remove the container (which contains all UI elements).
+  const actionsContainer = getActionsContainer();
+  if (actionsContainer) {
+    actionsContainer.remove();
   }
 }
 
+// TODO: move all other UI related code into a separate file.
+//
 // Listen for message from background.js, this is the entry point of the content script.
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'init') {
