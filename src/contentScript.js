@@ -1,5 +1,7 @@
 'use strict';
 
+import { isGithubRepository } from './common';
+
 // Content script file will run in the context of web page.
 // With content script you can manipulate the web pages using
 // Document Object Model (DOM).
@@ -8,26 +10,22 @@
 // We execute this script by making an entry in manifest.json file
 // under `content_scripts` property
 
-// For more information on Content Scripts,
-// See https://developer.chrome.com/extensions/content_scripts
-const checkboxName = 'target-repo';
+const PREFIX = 'gbd';
+const CHECKBOX_NAME = `${PREFIX}_target_repo`;
+const DELETE_BUTTON_ID = `${PREFIX}_delete`;
+
 const $ = document.querySelector.bind(document);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
 // location like `https://github.com/flyingsky?tab=repositories`
-function getGithubAcountId() {
-  return location.pathname.split('/').find(Boolean);
-}
+const getGithubAcountId = () => location.pathname.split('/').find(Boolean);
 
-function insertCheckBeforeRepoNames() {
-  $$('a[itemprop="name codeRepository"]').forEach((repoLink) => {
-    const repoName = repoLink.innerText.trim();
-    repoLink.parentNode.insertAdjacentHTML(
-      'afterbegin',
-      `<input type="checkbox" name="${checkboxName}" value="${repoName}">`
-    );
-  });
-}
+const getDeleteButton = () => $(`#${DELETE_BUTTON_ID}`);
+
+const getSelectedRepoNames = () =>
+  $$(`input[name="${CHECKBOX_NAME}"]`)
+    .filter((check) => check.checked)
+    .map((check) => check.value);
 
 function confirmDelete() {
   const repos = getSelectedRepoNames();
@@ -35,35 +33,62 @@ function confirmDelete() {
     return alert('Please select repo first');
   }
 
-  const confirmed = confirm(
-    'Are you sure to delete the selected repos: ' + repos.join(', ')
-  );
-  if (confirmed) {
-    chrome.runtime.sendMessage(
-      {
-        type: 'delete',
-        payload: {
-          repos,
-          account: getGithubAcountId(),
-        },
-      },
-      (response) => {
-        console.log(
-          `Finish send delete message from tab to background: ${response}`
-        );
-      }
-    );
+  if (
+    !confirm('Are you sure to delete the selected repos: ' + repos.join(', '))
+  ) {
+    // User cancelled the deletion, do nothing.
+    return;
   }
+
+  // Send the delete message to background.js to execute the deletion.
+  chrome.runtime.sendMessage(
+    {
+      type: 'delete',
+      payload: {
+        repos,
+        account: getGithubAcountId(),
+      },
+    },
+    (response) => {
+      console.log(
+        `Finish send delete message from tab to background: ${response}`
+      );
+    }
+  );
+}
+
+// Insert a checkbox before each repository link.
+function insertCheckBeforeRepoNames() {
+  const REPOSITORY_LINK_SELECTOR = 'a[itemprop="name codeRepository"]';
+
+  $$(REPOSITORY_LINK_SELECTOR).forEach((repoLink) => {
+    // Check if checkbox already exists for this repo
+    const existingCheckbox = repoLink.parentNode.querySelector(
+      `input[name="${CHECKBOX_NAME}"]`
+    );
+    if (existingCheckbox) {
+      return;
+    }
+
+    // If not, insert a checkbox before the repository link.
+    const repoName = repoLink.innerText.trim();
+    repoLink.parentNode.insertAdjacentHTML(
+      'afterbegin',
+      `<input type="checkbox" name="${CHECKBOX_NAME}" value="${repoName}">`
+    );
+  });
 }
 
 // TODO: the delete button could be replaced by the action button.
 function insertDeleteButton() {
-  if ($('#gbd_delete')) {
+  if (getDeleteButton()) {
     console.log('The delete button exists, exit');
     return;
   }
 
+  // Add the delete button to the repository page.
   const deleteButton = document.createElement('button');
+  deleteButton.id = DELETE_BUTTON_ID;
   deleteButton.innerText = 'Delete';
   deleteButton.style.position = 'sticky';
   deleteButton.style.left = '60%';
@@ -74,32 +99,29 @@ function insertDeleteButton() {
   deleteButton.style.background = 'red';
   deleteButton.style.border = '1px solid white';
   deleteButton.addEventListener('click', confirmDelete);
-  deleteButton.id = 'gbd_delete';
   $('main').insertAdjacentElement('beforeend', deleteButton);
 }
 
-function getSelectedRepoNames() {
-  return $$(`input[name="${checkboxName}"]`)
-    .filter((check) => check.checked)
-    .map((check) => check.value);
-}
-
+// Initialize the repository page DOM updates to show batch delete UI.
+// This function should be called when entering the repository page.
 function init() {
-  // Only insert the checkboxes and delete button into repository page.
-  const isRepositoryListPage = location.href.includes('tab=repositories');
-  if (isRepositoryListPage) {
+  if (isGithubRepository(location.href)) {
     insertCheckBeforeRepoNames();
     insertDeleteButton();
   }
 }
 
+// Deinitialize to remove the batch delete UI.
+// This function should be called when leaving the repository page.
 function deInit() {
-  if ($('#gbd_delete')) {
-    $('#gbd_delete').remove();
+  // Remove the delete button.
+  const deleteButton = getDeleteButton();
+  if (deleteButton) {
+    deleteButton.remove();
   }
 }
 
-// Listen for message
+// Listen for message from background.js, this is the entry point of the content script.
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'init') {
     // console.log('init the delete button');
