@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Github Bulk Delete",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Chrome Extension to bulk delete github repositories",
   "icons": {
     "16": "icons/icon_16.png",
