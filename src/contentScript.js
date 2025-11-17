@@ -1,7 +1,5 @@
 'use strict';
 
-import { isGithubRepository } from './common';
-
 // Content script file will run in the context of web page.
 // With content script you can manipulate the web pages using
 // Document Object Model (DOM).
@@ -29,10 +27,18 @@ const getSelectAllCheckbox = () => $(`#${SELECT_ALL_CHECKBOX_ID}`);
 
 const getActionsContainer = () => $(`#${ACTIONS_CONTAINER_ID}`);
 
+const getRepositoryList = () =>
+  $$(GITHUB_REPOSITORY_LINK_SELECTOR).map((repoLink) =>
+    repoLink.innerText.trim()
+  );
+
 const getSelectedRepoNames = () =>
   $$(`input[name="${CHECKBOX_NAME}"]`)
     .filter((check) => check.checked)
     .map((check) => check.value);
+
+// The previous repository list, which is used to detect the repository list DOM update.
+let previousRepoList = [];
 
 // Detect if GitHub is in dark mode or light mode by checking the actual background color.
 const isDarkModeTheme = () => {
@@ -91,6 +97,9 @@ function insertCheckBeforeRepoNames() {
       `input[name="${CHECKBOX_NAME}"]`
     );
     if (existingCheckbox) {
+      console.log(
+        `Checkbox already exists for repo: ${repoLink.innerText.trim()}`
+      );
       return;
     }
 
@@ -204,12 +213,17 @@ const buildDeleteButton = () => {
   return deleteButton;
 };
 
+// Delete the actions container.
+function deleteActionsContainer() {
+  const actionsContainer = getActionsContainer();
+  if (actionsContainer) {
+    actionsContainer.remove();
+  }
+}
+
 // TODO: the delete button could be replaced by the action button.
 function insertActionsContainer() {
-  if (getActionsContainer()) {
-    console.log('The batch delete UI container already exists, exit');
-    return;
-  }
+  deleteActionsContainer();
 
   // Inject CSS styles
   injectStyles();
@@ -235,12 +249,79 @@ function selectAllRepos() {
   });
 }
 
+function isRepositoryListUpdated() {
+  // If the repository lists are changed, we consider it as updated.
+  const currentRepoList = getRepositoryList();
+  if (currentRepoList.length !== previousRepoList.length) {
+    return true;
+  }
+
+  for (let i = 0; i < currentRepoList.length; i++) {
+    if (currentRepoList[i] !== previousRepoList[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Wait for the repository list DOM is updated.
+function waitForRepositoryListDOMReady() {
+  return new Promise((resolve, reject) => {
+    // The timeout id used to clear the timeout callback when the mutation observer detects the repository list update.
+    let timeoutId;
+
+    // Case 1: If repository list is already updated, resolve immediately
+    if (isRepositoryListUpdated()) {
+      return resolve('DOM update is detected immediately');
+    }
+
+    // Case 2: Watch for the DOM update by mutation observer.
+    const observer = new MutationObserver((mutations, obs) => {
+      if (isRepositoryListUpdated()) {
+        // Stop the mutation observer to avoid it's called again for any changes.
+        obs.disconnect();
+        // Clear the timeout to avoid it's called after the mutation observer detects the repository list update.
+        clearTimeout(timeoutId);
+        return resolve('DOM update is detected by mutation observer');
+      }
+    });
+
+    observer.observe($(GITHUB_REPOSITORY_LIST_SELECTOR), {
+      childList: true,
+      subtree: true,
+    });
+
+    // Case 3: Timeout after 2 seconds to catch the DOM update as fallback, which should not happen.
+    // The promise is only resolved once, so either the mutation observer or the timeout will resolve the promise.
+    timeoutId = setTimeout(() => {
+      console.log('Repository list update is not detected but trigger timeout');
+
+      // Stop the mutation observer.
+      observer.disconnect();
+
+      // If the repository list is updated, resolve the promise.
+      isRepositoryListUpdated()
+        ? resolve('DOM update is detected by timeout')
+        : reject('DOM update is not detected by timeout');
+    }, 2000);
+  });
+}
+
 // Initialize the repository page DOM updates to show batch delete UI.
 // This function should be called when entering the repository page.
-function init() {
-  if (isGithubRepository(location.href)) {
+async function init() {
+  try {
+    // The `init` message is sent when the resources are ready, but the DOM may not be updated yet.
+    // Especially when we change the repository page, the DOM may not be updated yet.
+    // So we need to wait for the DOM to be updated.
+    await waitForRepositoryListDOMReady();
+
+    // Update the batch delete UI.
+    previousRepoList = getRepositoryList();
     insertCheckBeforeRepoNames();
     insertActionsContainer();
+  } catch (error) {
+    console.error(`Cannot detect repository list update, error: ${error}`);
   }
 }
 
@@ -248,10 +329,8 @@ function init() {
 // This function should be called when leaving the repository page.
 function deInit() {
   // Remove the container (which contains all UI elements).
-  const actionsContainer = getActionsContainer();
-  if (actionsContainer) {
-    actionsContainer.remove();
-  }
+  deleteActionsContainer();
+  previousRepoList = [];
 }
 
 // TODO: move all other UI related code into a separate file.
@@ -259,13 +338,11 @@ function deInit() {
 // Listen for message from background.js, this is the entry point of the content script.
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'init') {
-    // console.log('init the delete button');
     init();
   } else if (request.type === 'deInit') {
-    // console.log('hide the delete button');
     deInit();
   } else if (request.type === 'delete') {
-    console.log(`Delete all repos:\n ${request.payload.repos.join('\n')}`);
+    console.log(`Deleted repos:\n ${request.payload.repos.join('\n')}`);
   }
 
   // Send an empty response
