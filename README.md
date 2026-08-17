@@ -23,6 +23,7 @@ Suggestions and pull requests are welcomed! To start the dev follow below steps:
 - `cd github-bulk-delete`
 - `npm install` if it's your first time to initial this project
 - `npm run watch` watch your change in local
+- `npm test` run unit tests
 - Load the extension into the Chrome.
   - Open chrome://extensions
   - Check the Developer mode checkbox
