@@ -10,6 +10,8 @@ After install this extension, sign in your account, then go to your repository l
 
 This extension will add a checkbox to each repository and a "Delete" button on the repository page. Select multiple repos, then click the Delete button to start the deletion automatically.
 
+**NOTE**: Actually this extension could be replaced by [GitHub CLI](https://cli.github.com/) (`gh`) and its `gh repo delete` command. See more details from below section.
+
 ## Design
 
 - The `contentScript.js` builds the UI on the repository page, including the checkbox next to each repository name, select all checkbox and delete button.
@@ -30,3 +32,53 @@ Suggestions and pull requests are welcomed! To start the dev follow below steps:
   - Click on the Load unpacked extension button
   - Select the folder auto generated folder `build`
 - Bundle the app into static files for Chrome store by `npm run repack` and you can find the out put in the release folder.
+
+## Github CLI
+
+Install [GitHub CLI](https://cli.github.com/) (`gh`) via below commands:
+
+```bash
+# macOS
+brew install gh
+
+# Windows (winget)
+winget install --id GitHub.cli
+
+# Linux
+# See distro-specific instructions: https://github.com/cli/cli/blob/trunk/docs/install_linux.md
+```
+
+Then authenticate, granting the `delete_repo` scope up front so batch deletion works without a re-prompt:
+
+```bash
+gh auth login
+gh auth refresh -h github.com -s delete_repo
+```
+
+Verify it's ready:
+
+```bash
+gh auth status
+```
+
+Delete repositories in batch by running following commands in terminal.
+
+```bash
+# Define the target repos to be deleted
+repos=(repo1 repo2 repo3)
+
+# Delete repos one by one without any confirmation, replace the <YOUR_GITHUB_ACCOUNT> with your github account name.
+# For example my github account is flyingsky.
+for r in "${repos[@]}"; do gh repo delete <YOUR_GITHUB_ACCOUNT>/$r --yes; done
+```
+
+To test this extension, you can use gh CLI to create multiple repositories like below.
+
+```bash
+# Define the target repos to be created
+repos=(repo1 repo2 repo3)
+
+# Create repos one by one without any confirmation, replace the <YOUR_GITHUB_ACCOUNT> with your github account name
+# For example my github account is flyingsky.
+for r in "${repos[@]}"; do gh repo create <YOUR_GITHUB_ACCOUNT>/$r --yes; done
+```
