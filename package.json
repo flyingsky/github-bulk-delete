@@ -1,7 +1,7 @@
 {
-  "name": "github-bulk-delete",
-  "version": "0.1.3",
-  "description": "Chrome Extension to bulk delete github repositories",
+  "name": "bulk-delete-for-github",
+  "version": "0.1.4",
+  "description": "Chrome Extension to bulk delete repositories for GitHub",
   "private": true,
   "scripts": {
     "prebuild": "rm -rf build",

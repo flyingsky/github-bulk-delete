@@ -1,6 +1,8 @@
-# <img src="public/icons/icon_48.png" width="45" align="left"> Github Bulk Delete
+# <img src="public/icons/icon_48.png" width="45" align="left"> Bulk Delete for GitHub
 
-GitHub Bulk Delete
+Bulk Delete for GitHub
+
+**NOTE** I don't expect this extension get more 1k installs and 4 star ratings based on 13 ratings. The more important thing is this extension gets the Microsoft's trademark bot notice, so it requests Google Chrome to take it down. It's my great honor! So I have rename it from "Github Bulk Delete" to "Bulk Delete for GitHub" based on Gemini Flash 3.8 suggestion. Hope it works!
 
 ## Features
 

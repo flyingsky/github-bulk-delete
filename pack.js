@@ -8,8 +8,12 @@ try {
     readFileSync(resolve(__dirname, 'build', 'manifest.json'), 'utf8')
   );
 
+  const pkg = JSON.parse(
+    readFileSync(resolve(__dirname, 'package.json'), 'utf8')
+  );
+  const pkgName = pkg.name || base;
   const outdir = 'release';
-  const filename = `${base}-v${version}.zip`;
+  const filename = `${pkgName}-v${version}.zip`;
   const zip = new AdmZip();
   zip.addLocalFolder('build');
   if (!existsSync(outdir)) {
